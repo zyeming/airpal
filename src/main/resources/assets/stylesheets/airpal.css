@@ -119,7 +119,7 @@ body {
 }
 
 .header .glyphicon {
-  margin-right: 5px;
+  margin-right: 10px;
 }
 
 .content {
@@ -401,7 +401,7 @@ body {
 }
 
 .left .scroll-container {
-  min-height: 400px;
+  height: 250px;
   padding-bottom: 10px;
 }
 

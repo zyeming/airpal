@@ -4,18 +4,7 @@ import com.airbnb.airpal.core.AirpalUserFactory;
 import com.airbnb.airpal.core.health.PrestoHealthCheck;
 import com.airbnb.airpal.modules.AirpalModule;
 import com.airbnb.airpal.modules.DropwizardModule;
-import com.airbnb.airpal.resources.ExecuteResource;
-import com.airbnb.airpal.resources.FilesResource;
-import com.airbnb.airpal.resources.HealthResource;
-import com.airbnb.airpal.resources.PingResource;
-import com.airbnb.airpal.resources.QueriesResource;
-import com.airbnb.airpal.resources.QueryResource;
-import com.airbnb.airpal.resources.ResultsPreviewResource;
-import com.airbnb.airpal.resources.S3FilesResource;
-import com.airbnb.airpal.resources.SessionResource;
-import com.airbnb.airpal.resources.TablesResource;
-import com.airbnb.airpal.resources.UserResource;
-import com.airbnb.airpal.resources.UsersResource;
+import com.airbnb.airpal.resources.*;
 import com.airbnb.airpal.resources.sse.SSEEventSourceServlet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -91,6 +80,7 @@ public class AirpalApplication extends Application<AirpalConfiguration>
         environment.jersey().register(injector.getInstance(FilesResource.class));
         environment.jersey().register(injector.getInstance(ResultsPreviewResource.class));
         environment.jersey().register(injector.getInstance(S3FilesResource.class));
+        environment.jersey().register(injector.getInstance(CatalogResource.class));
 
         environment.jersey().register(new UserInjectableProvider(injector.getInstance(AirpalUserFactory.class)));
 

@@ -76,6 +76,11 @@ public class PreviewTableCache
             partitionClause = format("WHERE %s = %s", partition.getName(), partitionValue);
         }
 
+        System.out.println(format("SELECT * FROM %s %s LIMIT %d",
+                Util.fqn(table.getConnectorId(), table.getSchema(), table.getTable()),
+                partitionClause,
+                limit));
+
         return format("SELECT * FROM %s %s LIMIT %d",
                 Util.fqn(table.getConnectorId(), table.getSchema(), table.getTable()),
                 partitionClause,

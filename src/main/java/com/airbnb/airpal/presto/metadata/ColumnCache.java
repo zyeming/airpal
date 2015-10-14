@@ -156,9 +156,9 @@ public class ColumnCache
         return cache.build();
     }
 
-    public List<HiveColumn> getColumns(String databaseName, String tableName) throws ExecutionException
+    public List<HiveColumn> getColumns(String catalog, String databaseName, String tableName) throws ExecutionException
     {
-        return schemaTableCache.get(Util.fqn(databaseName, tableName));
+        return schemaTableCache.get(Util.fqn(catalog, databaseName, tableName));
     }
 
     public List<HivePartition> getPartitions(String databaseName, String tableName) throws ExecutionException

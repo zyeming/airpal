@@ -97,11 +97,13 @@ public class TablesResource
     public Response getTableColumns(
             @Auth AirpalUser user,
             @PathParam("schema") String schema,
-            @PathParam("tableName") String tableName)
+            @PathParam("tableName") String tableName,
+            @QueryParam("catalog") Optional<String> catalogOptional)
             throws ExecutionException
     {
-        if (isAuthorizedRead(user, defaultCatalog, schema, tableName)) {
-            return Response.ok(columnCache.getColumns(schema, tableName)).build();
+        final String catalog = catalogOptional.or(defaultCatalog);
+        if (isAuthorizedRead(user, catalog, schema, tableName)) {
+            return Response.ok(columnCache.getColumns(catalog, schema, tableName)).build();
         }
         else {
             return Response.status(Response.Status.FORBIDDEN).build();

@@ -21,6 +21,7 @@ import com.airbnb.airpal.core.store.usage.SQLUsageStore;
 import com.airbnb.airpal.core.store.usage.UsageStore;
 import com.airbnb.airpal.presto.ClientSessionFactory;
 import com.airbnb.airpal.presto.QueryInfoClient;
+import com.airbnb.airpal.presto.metadata.CatalogCache;
 import com.airbnb.airpal.presto.metadata.ColumnCache;
 import com.airbnb.airpal.presto.metadata.PreviewTableCache;
 import com.airbnb.airpal.presto.metadata.SchemaCache;
@@ -189,6 +190,17 @@ public class AirpalModule extends AbstractModule
                                           @Named("presto") ExecutorService executorService)
     {
         final SchemaCache cache = new SchemaCache(queryRunnerFactory, executorService);
+        cache.populateCache(config.getPrestoCatalog());
+
+        return cache;
+    }
+
+    @Singleton
+    @Provides
+    public CatalogCache provideCatalogCache(QueryRunnerFactory queryRunnerFactory,
+                                            @Named("presto") ExecutorService executorService)
+    {
+        final CatalogCache cache = new CatalogCache(queryRunnerFactory, executorService);
         cache.populateCache(config.getPrestoCatalog());
 
         return cache;

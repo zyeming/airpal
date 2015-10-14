@@ -38,6 +38,8 @@ function highlightOnlyOption(selectize, item) {
 
 let TableSearch = React.createClass({
   displayName: 'TableSearch',
+  catalogs: [],
+  catalogTables: {},
 
   componentDidMount() {
     TableStore.listen(this._onChange);
@@ -69,6 +71,13 @@ let TableSearch = React.createClass({
     return (
       <section className="flex flex-column flex-initial table-search-row panel-body">
         <div className="flex flex-column form-group">
+          <label htmlFor="tables-input">Catalog</label>
+          <SearchInputField
+            ref="catalogSelectize"
+            placeholder="Select a catalog"
+            selectizeOptions={this.catalogSelectizeOptions} />
+        </div>
+        <div className="flex flex-column form-group">
           <label htmlFor="tables-input">Tables</label>
           <SearchInputField
             ref="tableSelectize"
@@ -89,9 +98,67 @@ let TableSearch = React.createClass({
   },
 
   /* - Selectize options --------------------------------------------------- */
-  tableSelectizeOptions() {
+  catalogSelectizeOptions() {
+    var that = this;
+
     return _.extend({}, commonSelectizeOptions, {
-      preload: true,
+      preload: 'focus',
+
+      render: {
+        option: this._renderCatalogOptions
+      },
+
+      valueField: 'catalog',
+      labelField: 'catalog',
+
+      sortField: [{
+        field: 'catalog',
+        direction: 'asc'
+      }],
+
+      searchField: ['catalog'],
+
+      plugins: {
+        'remove_button': {},
+
+        'header': {
+          headers: ['Catalog']
+        }
+      },
+
+      load(query, callback) {
+        if (that.catalogs.length > 1) {
+          return _.defer(function() {
+            callback(that.catalogs);
+          });
+        }
+
+        $.ajax({
+          url: './api/catalog',
+          type: 'GET',
+          error() { callback(); },
+
+          success(res) {
+            callback(res);
+          }
+        });
+      },
+
+      onItemAdd(catalog, $element) {
+        TableStore.catalog = catalog;
+        highlightOnlyOption(this, $element);
+      },
+
+      onItemRemove(catalog, $element) {
+        this.clearOptions();
+      }
+    });
+  },
+
+  tableSelectizeOptions() {
+    var that = this;
+    return _.extend({}, commonSelectizeOptions, {
+      preload: 'focus',
 
       render: {
         option: this._renderTableOptions
@@ -116,12 +183,19 @@ let TableSearch = React.createClass({
       },
 
       load(query, callback) {
+        if (!TableStore.catalog || that.catalogTables[TableStore.catalog]) {
+          return _.defer(function() {
+            callback(that.catalogTables[TableStore.catalog] || []);
+          });
+        }
+
         $.ajax({
-          url: './api/table',
+          url: './api/table?catalog=' + TableStore.catalog,
           type: 'GET',
           error() { callback(); },
 
           success(res) {
+            that.catalogTables[TableStore.catalog] = res;
             callback(res);
           }
         });
@@ -129,7 +203,8 @@ let TableSearch = React.createClass({
 
       onItemAdd(table, $element) {
         TableActions.addTable({
-          name: table
+          name: table,
+          catalog: TableStore.catalog
         });
         highlightOnlyOption(this, $element);
       },
@@ -252,7 +327,6 @@ let TableSearch = React.createClass({
             partition: itemName,
             table: self.state.table.name,
           });
-          //}
         }
       },
     });

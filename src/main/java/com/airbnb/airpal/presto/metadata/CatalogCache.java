@@ -8,67 +8,63 @@ import com.facebook.presto.client.StatementClient;
 import com.google.common.base.Function;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.lang.String.format;
+
+/**
+ * Created by shivamaggarwal on 10/13/15.
+ */
 
 @Slf4j
-public class SchemaCache
-        implements Closeable
-{
+public class CatalogCache implements Closeable {
+
     private static final long RELOAD_TIME_MINUTES = 2;
-    private static final Set<String> EXCLUDED_SCHEMAS = Sets.newHashSet("sys", "information_schema");
+    private static final Set<String> EXCLUDED_CATALOGS = Sets.newHashSet("system");
 
     private final ExecutorService executor;
     private final QueryRunner.QueryRunnerFactory queryRunnerFactory;
-    private final LoadingCache<String, Map<String, List<String>>> schemaTableCache;
+    private final LoadingCache<String, List<String>> catalogTableCache;
 
-    public SchemaCache(final QueryRunner.QueryRunnerFactory queryRunnerFactory,
-            final ExecutorService executor)
+    public CatalogCache(final QueryRunner.QueryRunnerFactory queryRunnerFactory,
+                       final ExecutorService executor)
     {
         this.queryRunnerFactory = checkNotNull(queryRunnerFactory, "queryRunnerFactory session was null!");
         this.executor = checkNotNull(executor, "executor was null!");
 
         ListeningExecutorService listeningExecutor = MoreExecutors.listeningDecorator(executor);
-        BackgroundCacheLoader<String, Map<String, List<String>>> loader =
-                new BackgroundCacheLoader<String, Map<String, List<String>>>(listeningExecutor)
+        BackgroundCacheLoader<String, List<String>> loader =
+                new BackgroundCacheLoader<String, List<String>>(listeningExecutor)
                 {
                     @Override
-                    public Map<String, List<String>> load(String catalogName)
+                    public List<String> load(String catalogs)
                     {
-                        return queryMetadata(format(
-                                "SELECT table_catalog, table_schema, table_name " +
-                                        "FROM %s.information_schema.tables ", catalogName));
+                        return queryMetadata("SHOW CATALOGS");
                     }
                 };
 
-        schemaTableCache = CacheBuilder.newBuilder()
+        catalogTableCache = CacheBuilder.newBuilder()
                 .refreshAfterWrite(RELOAD_TIME_MINUTES, TimeUnit.MINUTES)
                 .build(loader);
     }
 
-    private Map<String, List<String>> queryMetadata(String query)
+    private List<String> queryMetadata(String query)
     {
-        final Map<String, List<String>> cache = Maps.newHashMap();
+        final ImmutableList.Builder<String> cache = ImmutableList.builder();
         QueryRunner queryRunner = queryRunnerFactory.create();
         QueryClient queryClient = new QueryClient(queryRunner, io.dropwizard.util.Duration.seconds(60), query);
 
@@ -81,21 +77,12 @@ public class SchemaCache
                     QueryResults results = client.current();
                     if (results.getData() != null) {
                         for (List<Object> row : results.getData()) {
-                            String schema = (String) row.get(1);
-                            String table = (String) row.get(2);
+                            String catalog = (String) row.get(0);
 
-                            if (EXCLUDED_SCHEMAS.contains(schema)) {
+                            if (EXCLUDED_CATALOGS.contains(catalog)) {
                                 continue;
                             }
-
-                            List<String> tables = cache.get(schema);
-
-                            if (tables == null) {
-                                tables = Lists.newArrayList();
-                                cache.put(schema, tables);
-                            }
-
-                            tables.add(table);
+                            cache.add(catalog);
                         }
                     }
 
@@ -107,46 +94,40 @@ public class SchemaCache
             log.error("Caught timeout loading columns", e);
         }
 
-        return ImmutableMap.copyOf(cache);
+        return cache.build();
     }
 
     public void populateCache(final String catalog)
     {
-        checkNotNull(catalog, "schemaName is null");
+        checkNotNull(catalog, "catalog list is null");
         executor.execute(new Runnable()
         {
             @Override
             public void run()
             {
-                schemaTableCache.refresh(catalog);
+                catalogTableCache.refresh(catalog);
             }
         });
     }
 
-    public Set<String> getCatalogs()
-    {
-        return schemaTableCache.asMap().keySet();
-    }
-
-    public Map<String, List<String>> getSchemaMap(final String catalog)
+    public Map<String, List<String>> getCatalogMap()
     {
         try {
-            return schemaTableCache.get(catalog);
+            return catalogTableCache.asMap();
         }
-        catch (ExecutionException e) {
+        catch (Exception e) {
             e.printStackTrace();
             return Maps.newHashMap();
         }
     }
 
-    @Override
-    public void close()
-    {
-        executor.shutdownNow();
-    }
-
     public static ThreadFactory daemonThreadsNamed(String nameFormat)
     {
         return new ThreadFactoryBuilder().setNameFormat(nameFormat).setDaemon(true).build();
+    }
+
+    @Override
+    public void close() throws IOException {
+        executor.shutdownNow();
     }
 }
