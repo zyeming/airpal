@@ -81,8 +81,8 @@ public class SchemaCache
                     QueryResults results = client.current();
                     if (results.getData() != null) {
                         for (List<Object> row : results.getData()) {
-                            String schema = (String) row.get(1);
-                            String table = (String) row.get(2);
+                            String schema = (String) row.get(0);
+                            String table = (String) row.get(1);
 
                             if (EXCLUDED_SCHEMAS.contains(schema)) {
                                 continue;
