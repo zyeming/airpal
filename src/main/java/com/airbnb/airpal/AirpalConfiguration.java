@@ -37,7 +37,7 @@ public class AirpalConfiguration extends Configuration
     @Setter
     @JsonProperty
     @NotNull
-    private String prestoCatalog = "hive";
+    private String prestoCatalog = "mysql";
 
     @Getter
     @Setter

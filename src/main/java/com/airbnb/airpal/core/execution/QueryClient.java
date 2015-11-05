@@ -8,10 +8,12 @@ import com.google.common.base.Stopwatch;
 import io.dropwizard.util.Duration;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+@Slf4j
 @AllArgsConstructor
 public class QueryClient
 {
@@ -35,6 +37,7 @@ public class QueryClient
     {
         final Stopwatch stopwatch = Stopwatch.createStarted();
         T t = null;
+        log.info("Query started: " + query);
 
         try (StatementClient client = queryRunner.startInternalQuery(query)) {
             while (client.isValid() && !Thread.currentThread().isInterrupted()) {
@@ -47,8 +50,10 @@ public class QueryClient
             }
 
             finalResults.set(client.finalResults());
+            log.info("Query finished: " + query + ", result: " + finalResults.toString());
         } catch (RuntimeException | QueryTimeOutException e) {
             stopwatch.stop();
+            log.info("Query failed: " + query + ", error: " + e.getMessage());
             throw e;
         }
 
