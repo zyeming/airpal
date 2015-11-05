@@ -56,9 +56,8 @@ public class SchemaCache
                     public Map<String, List<String>> load(String catalogName)
                     {
                         return queryMetadata(format(
-                                "SELECT '%s', table_schema, table_name " +
-                                        "FROM %s.information_schema.tables ",
-                                catalogName, catalogName));
+                                "SELECT table_schema, table_name FROM %s.information_schema.tables",
+                                catalogName));
                     }
                 };
 
