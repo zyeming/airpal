@@ -16,12 +16,19 @@ public class AuthorizationUtil
 
     public static boolean isAuthorizedRead(AirpalUser subject, String connectorId, String schema, String table)
     {
-        return subject.isPermitted(format("read:%s.%s:%s", connectorId, schema, table));
+        return subject.isPermitted(format("read:%s.%s:%s", connectorId, schema, table)) ||
+                !isRejected(subject, connectorId, schema, table);
     }
 
     public static boolean isAuthorizedWrite(AirpalUser subject, String connectorId, String schema, String table)
     {
-        return subject.isPermitted(format("write:%s.%s:%s", connectorId, schema, table));
+        return subject.isPermitted(format("write:%s.%s:%s", connectorId, schema, table)) ||
+                !isRejected(subject, connectorId, schema, table);
+    }
+
+    private static boolean isRejected(AirpalUser subject, String connectorId, String schema, String table)
+    {
+        return subject.isPermitted(format("deny:%s.%s:%s", connectorId, schema, table));
     }
 
     public static class AuthorizedTablesPredicate
